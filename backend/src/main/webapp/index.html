@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简任务管理系统</title>
+    <!-- CDN Dependencies -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue3-sfc-loader@0.9.5/dist/vue3-sfc-loader.js"></script>
+</head>
+<body>
+    <div id="app">
+        <transition name="fade" mode="out-in">
+            <component :is="currentView" 
+                @login-success="handleLoginSuccess"
+                @goto-register="currentView = 'Register'"
+                @goto-login="currentView = 'Login'"
+                @logout="handleLogout"
+                v-if="!loading"
+            ></component>
+            <div v-else class="loading-screen">
+                <div class="spinner"></div>
+            </div>
+        </transition>
+
+        <!-- Global Toast System -->
+        <div class="toast-container">
+            <transition-group name="fade">
+                <div v-for="toast in toasts" :key="toast.id" :class="['toast', toast.type]">
+                    {{ toast.message }}
+                </div>
+            </transition-group>
+        </div>
+    </div>
+
+    <script type="module">
+        import { UserAuth } from './js/UserAuth.js';
+        import * as utils from './js/utils.js';
+        
+        window.UserAuth = UserAuth;
+        window.utils = utils;
+
+        const { createApp, ref, onMounted, defineAsyncComponent, provide } = Vue;
+        const { loadModule } = window['vue3-sfc-loader'];
+
+        const sfcLoaderOptions = {
+            moduleCache: { vue: Vue },
+            async getFile(url) {
+                const res = await fetch(url);
+                if (!res.ok) throw Object.assign(new Error(res.statusText + ' ' + url), { res });
+                return { getContentData: (asBinary) => asBinary ? res.arrayBuffer() : res.text() };
+            },
+            addStyle(textContent) {
+                const style = Object.assign(document.createElement('style'), { textContent });
+                const ref = document.head.getElementsByTagName('style')[0] || null;
+                document.head.insertBefore(style, ref);
+            },
+        };
+
+        const loadVue = (name) => defineAsyncComponent(() =>
+            loadModule(`./components/${name}.vue`, sfcLoaderOptions)
+        );
+
+        const app = createApp({
+            setup() {
+                const currentView = ref('Login');
+                const loading = ref(true);
+                const toasts = ref([]);
+                let toastId = 0;
+
+                const showToast = (message, type = 'info') => {
+                    const id = toastId++;
+                    toasts.value.push({ id, message, type });
+                    setTimeout(() => {
+                        toasts.value = toasts.value.filter(t => t.id !== id);
+                    }, 3000);
+                };
+
+                provide('showToast', showToast);
+
+                const handleLoginSuccess = () => {
+                    currentView.value = 'TodoList';
+                };
+
+                const handleLogout = async () => {
+                    await UserAuth.logout();
+                    currentView.value = 'Login';
+                    showToast('已退出登录', 'success');
+                };
+
+                onMounted(async () => {
+                    const user = await UserAuth.checkAuth();
+                    if (user) {
+                        currentView.value = 'TodoList';
+                    }
+                    loading.value = false;
+                });
+
+                return {
+                    currentView,
+                    loading,
+                    handleLoginSuccess,
+                    handleLogout,
+                    toasts
+                };
+            }
+        });
+
+        // Register all components as .vue files via vue3-sfc-loader
+        const componentNames = [
+            'Login', 'Register', 'TodoList', 'TodoItem',
+            'TaskFilter', 'TaskStats', 'UserSelect', 'TodayFocus'
+        ];
+
+        for (const name of componentNames) {
+            app.component(name, loadVue(name));
+        }
+
+        app.mount('#app');
+    </script>
+</body>
+</html>

@@ -216,15 +216,38 @@ export default {
         const res = await axios.get('/api/tasks');
         tasks.value = res.data;
       } catch (e) {
-        showToast('数据同步失败', 'danger');
+        let msg = '数据同步失败';
+        if (e.response && e.response.status === 401) {
+          msg = '登录已过期，请重新登录';
+        }
+        showToast(msg, 'danger');
       }
     };
 
+    const validPriorities = ['high', 'medium', 'low'];
+    const maxTextLength = 500;
+
     const handleAddTask = async () => {
-      if (!newTask.text.trim()) return;
+      const text = newTask.text.trim();
+      if (!text) {
+        showToast('任务内容不能为空', 'danger');
+        return;
+      }
+      if (text.length > maxTextLength) {
+        showToast(`任务内容不能超过 ${maxTextLength} 个字符`, 'danger');
+        return;
+      }
+      if (!validPriorities.includes(newTask.priority)) {
+        showToast('优先级不合法', 'danger');
+        return;
+      }
+      if (newTask.due_date && isNaN(new Date(newTask.due_date).getTime())) {
+        showToast('截止时间不合法', 'danger');
+        return;
+      }
       try {
         const payload = {
-            text: newTask.text.trim(),
+            text: text,
             priority: newTask.priority,
             dueDate: null,
             assigneeId: null
@@ -246,7 +269,15 @@ export default {
         newTask.assigneeId = null;
         fetchTasks();
       } catch (e) {
-        showToast('添加失败', 'danger');
+        let msg = '添加失败';
+        if (e.response) {
+          if (e.response.status === 401) {
+            msg = '登录已过期，请重新登录';
+          } else if (e.response.data && e.response.data.message) {
+            msg = e.response.data.message;
+          }
+        }
+        showToast(msg, 'danger');
       }
     };
 
@@ -261,7 +292,15 @@ export default {
         deleteConfirmId.value = null;
         fetchTasks();
       } catch (e) {
-        showToast('删除失败', 'danger');
+        let msg = '删除失败';
+        if (e.response) {
+          if (e.response.status === 401) {
+            msg = '登录已过期，请重新登录';
+          } else if (e.response.data && e.response.data.message) {
+            msg = e.response.data.message;
+          }
+        }
+        showToast(msg, 'danger');
       }
     };
 

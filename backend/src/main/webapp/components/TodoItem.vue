@@ -109,7 +109,11 @@ export default {
         });
         emit('update');
       } catch (e) {
-        showToast('无法同步状态', 'danger');
+        let msg = '无法同步状态';
+        if (e.response && e.response.status === 401) {
+          msg = '登录已过期，请重新登录';
+        }
+        showToast(msg, 'danger');
       }
     };
 
@@ -125,9 +129,28 @@ export default {
     };
 
     const saveEdit = async () => {
+      const text = editData.text.trim();
+      if (!text) {
+        showToast('任务内容不能为空', 'danger');
+        return;
+      }
+      if (text.length > 500) {
+        showToast('任务内容不能超过 500 个字符', 'danger');
+        return;
+      }
+      const validPriorities = ['high', 'medium', 'low'];
+      if (!validPriorities.includes(editData.priority)) {
+        showToast('优先级不合法', 'danger');
+        return;
+      }
+      if (editData.due_date && isNaN(new Date(editData.due_date).getTime())) {
+        showToast('截止时间不合法', 'danger');
+        return;
+      }
       try {
         const payload = { 
             ...editData,
+            text: text,
             completed: props.task.completed,
             dueDate: editData.due_date ? new Date(editData.due_date).getTime() : null
         };
@@ -136,7 +159,15 @@ export default {
         isEditing.value = false;
         emit('update');
       } catch (e) {
-        showToast('数据保存失败', 'danger');
+        let msg = '数据保存失败';
+        if (e.response) {
+          if (e.response.status === 401) {
+            msg = '登录已过期，请重新登录';
+          } else if (e.response.data && e.response.data.message) {
+            msg = e.response.data.message;
+          }
+        }
+        showToast(msg, 'danger');
       }
     };
 

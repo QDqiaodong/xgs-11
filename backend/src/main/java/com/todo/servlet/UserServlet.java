@@ -121,6 +121,12 @@ public class UserServlet extends HttpServlet {
     }
 
     private void getAllUsers(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        User user = (User) req.getSession().getAttribute("user");
+        if (user == null) {
+            resp.setStatus(401);
+            resp.getWriter().write("{\"success\":false,\"message\":\"未登录，请先登录\"}");
+            return;
+        }
         List<User> users = new ArrayList<>();
         String sql = "SELECT id, username FROM users";
         try (Connection conn = DBUtil.getConnection();

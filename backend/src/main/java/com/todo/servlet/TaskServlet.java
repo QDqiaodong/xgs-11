@@ -18,6 +18,30 @@ import java.util.List;
 @WebServlet(urlPatterns = {"/api/tasks", "/api/tasks/*"})
 public class TaskServlet extends HttpServlet {
     private ObjectMapper objectMapper = new ObjectMapper();
+    private static final java.util.Set<String> VALID_PRIORITIES = java.util.Set.of("high", "medium", "low");
+    private static final int MAX_TEXT_LENGTH = 500;
+
+    private String validateTask(Task task, boolean isUpdate) {
+        if (task.getText() == null || task.getText().trim().isEmpty()) {
+            return "任务内容不能为空";
+        }
+        if (task.getText().length() > MAX_TEXT_LENGTH) {
+            return "任务内容不能超过 " + MAX_TEXT_LENGTH + " 个字符";
+        }
+        String priority = task.getPriority();
+        if (priority != null && !priority.isEmpty() && !VALID_PRIORITIES.contains(priority)) {
+            return "优先级必须是 high、medium 或 low";
+        }
+        if (task.getDueDate() != null) {
+            long now = System.currentTimeMillis();
+            long dueTime = task.getDueDate().getTime();
+            long tenYearsMs = 10L * 365 * 24 * 60 * 60 * 1000;
+            if (dueTime < now - tenYearsMs || dueTime > now + tenYearsMs) {
+                return "截止时间不合法";
+            }
+        }
+        return null;
+    }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -77,6 +101,12 @@ public class TaskServlet extends HttpServlet {
 
         try {
             Task task = objectMapper.readValue(req.getReader(), Task.class);
+            String validationError = validateTask(task, false);
+            if (validationError != null) {
+                resp.setStatus(400);
+                resp.getWriter().write("{\"success\":false, \"message\":\"" + validationError + "\"}");
+                return;
+            }
             String sql = "INSERT INTO tasks (user_id, assignee_id, text, completed, priority, due_date) VALUES (?, ?, ?, ?, ?, ?)";
             try (Connection conn = DBUtil.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -147,6 +177,12 @@ public class TaskServlet extends HttpServlet {
             }
             
             Task task = objectMapper.readValue(req.getReader(), Task.class);
+            String validationError = validateTask(task, true);
+            if (validationError != null) {
+                resp.setStatus(400);
+                resp.getWriter().write("{\"success\":false, \"message\":\"" + validationError + "\"}");
+                return;
+            }
             String sql = "UPDATE tasks SET assignee_id = ?, text = ?, completed = ?, priority = ?, due_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
             try (Connection conn = DBUtil.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {

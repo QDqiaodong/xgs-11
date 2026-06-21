@@ -8,20 +8,25 @@
 </template>
 
 <script>
-const { ref, onMounted } = Vue;
+const { ref, onMounted, inject } = Vue;
 
 export default {
   props: ['modelValue'],
   emits: ['update:modelValue'],
   setup() {
     const users = ref([]);
+    const showToast = inject('showToast');
 
     onMounted(async () => {
       try {
         const res = await axios.get('/api/users');
         users.value = res.data;
       } catch (e) {
-        console.error('Failed to fetch users');
+        if (e.response && e.response.status === 401) {
+          showToast('登录已过期，请重新登录', 'danger');
+        } else {
+          showToast('获取用户列表失败', 'danger');
+        }
       }
     });
 

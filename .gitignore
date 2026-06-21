@@ -36,14 +36,20 @@ lerna-debug.log*
 # ====================== 4、环境配置（过滤本地私有配置，保留示例模板） ======================
 .env
 .env.*
-!.env.example
 !.env.sample
 !.env.template
+env.example
 backend/src/main/resources/application-local.yml
 backend/src/main/resources/application-*.local.yml
 frontend/.env.local
 frontend/.env.*.local
 *.local
+
+# ====================== 4.1、部署/本地运行配置（非业务代码） ======================
+.dockerignore
+docker-compose.yml
+start.sh
+backend/Dockerfile
 
 # ====================== 5、前端(Vite/Vue/React)依赖&打包产物 ======================
 node_modules/

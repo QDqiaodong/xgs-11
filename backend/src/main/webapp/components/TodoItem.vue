@@ -1,6 +1,15 @@
 <template>
-  <div :class="['card', 'premium-task-card', { 'is-completed': task.completed, [`is-${riskLevel}`]: !task.completed && riskLevel !== 'normal' }]">
+  <div :class="['card', 'premium-task-card', { 'is-completed': task.completed, 'is-selected': selected, [`is-${riskLevel}`]: !task.completed && riskLevel !== 'normal' }]">
     <div class="card-accent-strip"></div>
+    
+    <div v-if="batchMode" class="batch-select-control">
+      <label class="batch-checkbox">
+        <input type="checkbox" :checked="selected" @change="$emit('toggle-select', task.id)">
+        <span class="batch-checkbox-box">
+          <span class="batch-checkbox-tick"></span>
+        </span>
+      </label>
+    </div>
     
     <div class="task-control">
       <label class="premium-checkbox">
@@ -80,8 +89,8 @@
 const { ref, reactive, computed, inject } = Vue;
 
 export default {
-  props: ['task', 'currentUser'],
-  emits: ['update', 'delete'],
+  props: ['task', 'currentUser', 'batchMode', 'selected'],
+  emits: ['update', 'delete', 'toggle-select'],
   inject: ['showToast'],
   setup(props, { emit }) {
     const isEditing = ref(false);

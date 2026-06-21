@@ -2145,3 +2145,315 @@ body {
   color: #0f172a;
   line-height: 1.5;
 }
+
+/* Batch Operation Styles */
+.board-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-batch-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  background: #eef2ff;
+  color: var(--primary);
+  border: 1.5px solid rgba(79, 70, 229, 0.2);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.btn-batch-toggle:hover {
+  background: var(--primary);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -4px var(--primary-glow);
+}
+
+.btn-batch-cancel {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  background: #fee2e2;
+  color: var(--danger);
+  border: 1.5px solid rgba(239, 68, 68, 0.2);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.btn-batch-cancel:hover {
+  background: var(--danger);
+  color: white;
+}
+
+.batch-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border: 1.5px solid rgba(79, 70, 229, 0.15);
+}
+
+.batch-select-all {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.batch-select-text {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.batch-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btn-batch-op {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: white;
+  color: var(--text-main);
+  border: 1.5px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.btn-batch-op:hover:not(:disabled) {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px -4px var(--primary-glow);
+}
+
+.btn-batch-op:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Batch Checkbox */
+.batch-select-control {
+  padding-top: 0.25rem;
+  padding-right: 0.5rem;
+}
+
+.batch-checkbox {
+  display: block;
+  position: relative;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.batch-checkbox input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.batch-checkbox-box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  background-color: white;
+  border: 2.5px solid #cbd5e1;
+  border-radius: 8px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.batch-checkbox:hover .batch-checkbox-box {
+  border-color: var(--primary);
+  transform: scale(1.05);
+}
+
+.batch-checkbox input:checked ~ .batch-checkbox-box {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.batch-checkbox-tick {
+  position: absolute;
+  display: none;
+  left: 7px;
+  top: 2px;
+  width: 5px;
+  height: 11px;
+  border: solid white;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+
+.batch-checkbox input:checked ~ .batch-checkbox-box .batch-checkbox-tick {
+  display: block;
+}
+
+.batch-checkbox-lg .batch-checkbox-box {
+  width: 28px;
+  height: 28px;
+}
+
+.batch-checkbox-lg .batch-checkbox-tick {
+  left: 9px;
+  top: 3px;
+  width: 6px;
+  height: 13px;
+}
+
+/* Selected task card state */
+.premium-task-card.is-selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.03) 0%, white 100%);
+}
+
+.premium-task-card.is-selected .card-accent-strip {
+  opacity: 1;
+  background: var(--primary);
+}
+
+/* Batch Modal */
+.batch-modal {
+  max-width: 580px;
+}
+
+.batch-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border-radius: var(--radius-md);
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(79, 70, 229, 0.1);
+}
+
+.summary-icon-box {
+  width: 52px;
+  height: 52px;
+  background: white;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.summary-info {
+  flex: 1;
+}
+
+.summary-title {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.summary-count {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.summary-count strong {
+  color: var(--primary);
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.batch-form {
+  margin-bottom: 1.5rem;
+}
+
+.form-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+.batch-preview-list {
+  background: #f8fafc;
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.preview-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.85rem;
+}
+
+.preview-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.preview-task-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.preview-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.preview-dot.dot-high { background: var(--danger); }
+.preview-dot.dot-medium { background: var(--warning); }
+.preview-dot.dot-low { background: var(--success); }
+
+.preview-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-more {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-align: center;
+  padding-top: 0.25rem;
+}

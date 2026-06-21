@@ -87,7 +87,41 @@
 
         <section class="task-board">
           <div class="board-header">
-            <h2>待办清单 <span class="count-chip">{{ filteredTasks.length }}</span></h2>
+            <div class="board-header-left">
+              <h2>待办清单 <span class="count-chip">{{ filteredTasks.length }}</span></h2>
+              <button v-if="!batchMode" @click="enterBatchMode" class="btn-batch-toggle" title="批量操作">
+                <span>☑️</span> 批量操作
+              </button>
+              <button v-else @click="exitBatchMode" class="btn-batch-cancel" title="取消批量操作">
+                <span>✕</span> 取消
+              </button>
+            </div>
+          </div>
+
+          <div v-if="batchMode" class="batch-action-bar glass">
+            <div class="batch-select-all">
+              <label class="batch-checkbox batch-checkbox-lg">
+                <input type="checkbox" :checked="isAllSelected" @change="toggleSelectAll" :disabled="filteredTasks.length === 0">
+                <span class="batch-checkbox-box">
+                  <span class="batch-checkbox-tick"></span>
+                </span>
+              </label>
+              <span class="batch-select-text">全选 (已选 {{ selectedTaskIds.length }} 项)</span>
+            </div>
+            <div class="batch-actions">
+              <button @click="openBatchModal('priority')" :disabled="selectedTaskIds.length === 0" class="btn-batch-op">
+                <span>🚩</span> 调整优先级
+              </button>
+              <button @click="openBatchModal('status')" :disabled="selectedTaskIds.length === 0" class="btn-batch-op">
+                <span>✅</span> 完成状态
+              </button>
+              <button @click="openBatchModal('dueDate')" :disabled="selectedTaskIds.length === 0" class="btn-batch-op">
+                <span>📅</span> 截止日期
+              </button>
+              <button @click="openBatchModal('assignee')" :disabled="selectedTaskIds.length === 0" class="btn-batch-op">
+                <span>👤</span> 指派受托人
+              </button>
+            </div>
           </div>
 
           <div class="task-grid-feed">
@@ -97,8 +131,11 @@
                 :key="task.id" 
                 :task="task" 
                 :currentUser="currentUser"
+                :batchMode="batchMode"
+                :selected="selectedTaskIds.includes(task.id)"
                 @update="fetchTasks"
                 @delete="confirmDelete"
+                @toggle-select="toggleTaskSelect"
               />
             </transition-group>
             
@@ -175,6 +212,76 @@
           </div>
         </div>
       </div>
+
+      <div v-if="showBatchModal" class="modal-overlay animate-entrance" @click.self="closeBatchModal">
+        <div class="modal glass batch-modal">
+          <div class="modal-header-lite">
+            <h3>批量{{ batchOperationLabel }}</h3>
+            <button @click="closeBatchModal" class="btn-x">×</button>
+          </div>
+          
+          <div class="batch-summary-card">
+            <div class="summary-icon-box">
+              <span class="summary-icon">{{ batchOperationIcon }}</span>
+            </div>
+            <div class="summary-info">
+              <p class="summary-title">即将对以下任务执行操作</p>
+              <p class="summary-count">共 <strong>{{ selectedTaskIds.length }}</strong> 个任务</p>
+            </div>
+          </div>
+
+          <div class="batch-form">
+            <div v-if="batchOperation === 'priority'" class="form-group-lite">
+              <label>设置优先级</label>
+              <select v-model="batchFormData.priority" class="input">
+                <option value="high">紧急</option>
+                <option value="medium">普通</option>
+                <option value="low">较低</option>
+              </select>
+            </div>
+
+            <div v-if="batchOperation === 'status'" class="form-group-lite">
+              <label>设置状态</label>
+              <select v-model="batchFormData.status" class="input">
+                <option value="completed">标记为已完成</option>
+                <option value="pending">标记为未完成</option>
+              </select>
+            </div>
+
+            <div v-if="batchOperation === 'dueDate'" class="form-group-lite">
+              <label>设置截止日期</label>
+              <input type="datetime-local" v-model="batchFormData.due_date" class="input">
+              <p class="form-hint">留空则清除截止日期</p>
+            </div>
+
+            <div v-if="batchOperation === 'assignee'" class="form-group-lite">
+              <label>指派受托人</label>
+              <UserSelect v-model="batchFormData.assigneeId" />
+            </div>
+          </div>
+
+          <div class="batch-preview-list">
+            <p class="preview-title">影响任务预览</p>
+            <div class="preview-tasks">
+              <div v-for="task in selectedTasksPreview" :key="task.id" class="preview-task-item">
+                <span class="preview-dot" :class="'dot-' + task.priority"></span>
+                <span class="preview-text">{{ task.text.length > 40 ? task.text.substring(0, 40) + '...' : task.text }}</span>
+              </div>
+              <div v-if="selectedTaskIds.length > 5" class="preview-more">
+                ... 还有 {{ selectedTaskIds.length - 5 }} 个任务
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-btns">
+            <button type="button" @click="closeBatchModal" class="btn-cancel">取消</button>
+            <button @click="executeBatchOperation" :disabled="batchSubmitting" class="btn btn-primary">
+              <span v-if="batchSubmitting" class="btn-loader"></span>
+              <span v-else>确认执行</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </Teleport>
   </div>
 </template>
@@ -191,6 +298,18 @@ export default {
     const showAddModal = ref(false);
     const deleteConfirmId = ref(null);
     const showToast = inject('showToast');
+
+    const batchMode = ref(false);
+    const selectedTaskIds = ref([]);
+    const showBatchModal = ref(false);
+    const batchOperation = ref('');
+    const batchSubmitting = ref(false);
+    const batchFormData = reactive({
+      priority: 'medium',
+      status: 'completed',
+      due_date: '',
+      assigneeId: null
+    });
 
     const filters = ref({
       keyword: '',
@@ -306,6 +425,129 @@ export default {
       }
     };
 
+    const enterBatchMode = () => {
+      batchMode.value = true;
+      selectedTaskIds.value = [];
+    };
+
+    const exitBatchMode = () => {
+      batchMode.value = false;
+      selectedTaskIds.value = [];
+    };
+
+    const toggleTaskSelect = (taskId) => {
+      const index = selectedTaskIds.value.indexOf(taskId);
+      if (index === -1) {
+        selectedTaskIds.value.push(taskId);
+      } else {
+        selectedTaskIds.value.splice(index, 1);
+      }
+    };
+
+    const isAllSelected = computed(() => {
+      if (filteredTasks.value.length === 0) return false;
+      return filteredTasks.value.every(t => selectedTaskIds.value.includes(t.id));
+    });
+
+    const toggleSelectAll = () => {
+      if (isAllSelected.value) {
+        selectedTaskIds.value = [];
+      } else {
+        selectedTaskIds.value = filteredTasks.value.map(t => t.id);
+      }
+    };
+
+    const batchOperationLabel = computed(() => {
+      const labels = {
+        priority: '调整优先级',
+        status: '更新状态',
+        dueDate: '设置截止日期',
+        assignee: '指派受托人'
+      };
+      return labels[batchOperation.value] || '';
+    });
+
+    const batchOperationIcon = computed(() => {
+      const icons = {
+        priority: '🚩',
+        status: '✅',
+        dueDate: '📅',
+        assignee: '👤'
+      };
+      return icons[batchOperation.value] || '📋';
+    });
+
+    const selectedTasksPreview = computed(() => {
+      return tasks.value.filter(t => selectedTaskIds.value.includes(t.id)).slice(0, 5);
+    });
+
+    const openBatchModal = (operation) => {
+      batchOperation.value = operation;
+      batchFormData.priority = 'medium';
+      batchFormData.status = 'completed';
+      batchFormData.due_date = '';
+      batchFormData.assigneeId = null;
+      showBatchModal.value = true;
+    };
+
+    const closeBatchModal = () => {
+      if (!batchSubmitting.value) {
+        showBatchModal.value = false;
+      }
+    };
+
+    const executeBatchOperation = async () => {
+      if (selectedTaskIds.value.length === 0) {
+        showToast('请先选择任务', 'danger');
+        return;
+      }
+
+      batchSubmitting.value = true;
+      try {
+        let value = null;
+        if (batchOperation.value === 'priority') {
+          value = batchFormData.priority;
+        } else if (batchOperation.value === 'status') {
+          value = batchFormData.status;
+        } else if (batchOperation.value === 'dueDate') {
+          if (batchFormData.due_date) {
+            value = new Date(batchFormData.due_date).getTime().toString();
+          } else {
+            value = '';
+          }
+        } else if (batchOperation.value === 'assignee') {
+          value = batchFormData.assigneeId ? batchFormData.assigneeId.toString() : '';
+        }
+
+        const res = await axios.post('/api/tasks/batch', {
+          taskIds: selectedTaskIds.value,
+          operation: batchOperation.value,
+          value: value
+        });
+
+        if (res.data && res.data.success) {
+          showToast(`批量操作成功，共更新 ${res.data.updatedCount || res.data.totalCount} 个任务`, 'success');
+          showBatchModal.value = false;
+          exitBatchMode();
+          fetchTasks();
+        } else {
+          showToast(res.data?.message || '批量操作失败', 'danger');
+        }
+      } catch (e) {
+        let msg = '批量操作失败';
+        if (e.response) {
+          if (e.response.status === 401) {
+            msg = '登录已过期，请重新登录';
+          } else if (e.response.data && e.response.data.message) {
+            msg = e.response.data.message;
+          }
+        }
+        showToast(msg, 'danger');
+      } finally {
+        batchSubmitting.value = false;
+      }
+    };
+
     const filteredTasks = computed(() => {
       const f = filters.value;
       let result = tasks.value.filter(t => {
@@ -404,7 +646,11 @@ export default {
     return {
       tasks, currentUser, filters, newTask, showAddModal, handleAddTask, fetchTasks,
       confirmDelete, deleteConfirmId, handleDelete, filteredTasks, sortBy, sortOrder,
-      currentPage, pageSize, totalPages, paginatedTasks, handleStatFilter
+      currentPage, pageSize, totalPages, paginatedTasks, handleStatFilter,
+      batchMode, selectedTaskIds, enterBatchMode, exitBatchMode, toggleTaskSelect,
+      isAllSelected, toggleSelectAll, showBatchModal, batchOperation, batchFormData,
+      batchOperationLabel, batchOperationIcon, selectedTasksPreview,
+      openBatchModal, closeBatchModal, executeBatchOperation, batchSubmitting
     };
   }
 }

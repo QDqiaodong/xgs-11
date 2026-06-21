@@ -19,6 +19,7 @@ import java.util.List;
 public class TaskServlet extends HttpServlet {
     private ObjectMapper objectMapper = new ObjectMapper();
     private static final java.util.Set<String> VALID_PRIORITIES = java.util.Set.of("high", "medium", "low");
+    private static final java.util.Set<String> VALID_BATCH_OPS = java.util.Set.of("priority", "status", "dueDate", "assignee");
     private static final int MAX_TEXT_LENGTH = 500;
 
     private String validateTask(Task task, boolean isUpdate) {
@@ -99,6 +100,12 @@ public class TaskServlet extends HttpServlet {
             return;
         }
 
+        String pathInfo = req.getPathInfo();
+        if (pathInfo != null && pathInfo.startsWith("/batch")) {
+            handleBatchUpdate(req, resp, user);
+            return;
+        }
+
         try {
             Task task = objectMapper.readValue(req.getReader(), Task.class);
             String validationError = validateTask(task, false);
@@ -131,6 +138,151 @@ public class TaskServlet extends HttpServlet {
             e.printStackTrace();
             resp.setStatus(500);
             resp.getWriter().write("{\"success\":false, \"message\":\"Internal server error\"}");
+        }
+    }
+
+    private void handleBatchUpdate(HttpServletRequest req, HttpServletResponse resp, User user) throws IOException {
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(req.getReader());
+            if (!root.has("taskIds") || !root.has("operation")) {
+                resp.setStatus(400);
+                resp.getWriter().write("{\"success\":false, \"message\":\"缺少必要参数\"}");
+                return;
+            }
+
+            String operation = root.get("operation").asText();
+            if (!VALID_BATCH_OPS.contains(operation)) {
+                resp.setStatus(400);
+                resp.getWriter().write("{\"success\":false, \"message\":\"不支持的批量操作类型\"}");
+                return;
+            }
+
+            List<Integer> taskIds = new ArrayList<>();
+            com.fasterxml.jackson.databind.JsonNode idsNode = root.get("taskIds");
+            if (!idsNode.isArray()) {
+                resp.setStatus(400);
+                resp.getWriter().write("{\"success\":false, \"message\":\"taskIds 必须是数组\"}");
+                return;
+            }
+            for (com.fasterxml.jackson.databind.JsonNode idNode : idsNode) {
+                taskIds.add(idNode.asInt());
+            }
+
+            if (taskIds.isEmpty()) {
+                resp.setStatus(400);
+                resp.getWriter().write("{\"success\":false, \"message\":\"请选择要操作的任务\"}");
+                return;
+            }
+
+            if (taskIds.size() > 100) {
+                resp.setStatus(400);
+                resp.getWriter().write("{\"success\":false, \"message\":\"批量操作最多支持 100 条任务\"}");
+                return;
+            }
+
+            String value = root.has("value") && !root.get("value").isNull() ? root.get("value").asText() : null;
+
+            if ("priority".equals(operation) && (value == null || !VALID_PRIORITIES.contains(value))) {
+                resp.setStatus(400);
+                resp.getWriter().write("{\"success\":false, \"message\":\"优先级不合法\"}");
+                return;
+            }
+
+            if ("status".equals(operation) && (value == null || (!"completed".equals(value) && !"pending".equals(value)))) {
+                resp.setStatus(400);
+                resp.getWriter().write("{\"success\":false, \"message\":\"状态值不合法\"}");
+                return;
+            }
+
+            try (Connection conn = DBUtil.getConnection()) {
+                List<Integer> allowedIds = new ArrayList<>();
+                String placeholders = String.join(",", java.util.Collections.nCopies(taskIds.size(), "?"));
+                String checkSql = "SELECT id, user_id, assignee_id FROM tasks WHERE id IN (" + placeholders + ")";
+                try (PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
+                    for (int i = 0; i < taskIds.size(); i++) {
+                        checkPs.setInt(i + 1, taskIds.get(i));
+                    }
+                    try (ResultSet rs = checkPs.executeQuery()) {
+                        while (rs.next()) {
+                            int ownerId = rs.getInt("user_id");
+                            Integer assigneeId = (Integer) rs.getObject("assignee_id");
+                            boolean isOwner = ownerId == user.getId();
+                            boolean isAssignee = assigneeId != null && assigneeId == user.getId();
+                            if (isOwner || isAssignee) {
+                                allowedIds.add(rs.getInt("id"));
+                            }
+                        }
+                    }
+                }
+
+                if (allowedIds.isEmpty()) {
+                    resp.setStatus(403);
+                    resp.getWriter().write("{\"success\":false, \"message\":\"没有权限操作选中的任务\"}");
+                    return;
+                }
+
+                String updateSql;
+                if ("priority".equals(operation)) {
+                    updateSql = "UPDATE tasks SET priority = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (";
+                } else if ("status".equals(operation)) {
+                    updateSql = "UPDATE tasks SET completed = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (";
+                } else if ("dueDate".equals(operation)) {
+                    updateSql = "UPDATE tasks SET due_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (";
+                } else if ("assignee".equals(operation)) {
+                    updateSql = "UPDATE tasks SET assignee_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (";
+                } else {
+                    resp.setStatus(400);
+                    resp.getWriter().write("{\"success\":false, \"message\":\"未知操作类型\"}");
+                    return;
+                }
+
+                String idPlaceholders = String.join(",", java.util.Collections.nCopies(allowedIds.size(), "?"));
+                updateSql += idPlaceholders + ")";
+
+                try (PreparedStatement updatePs = conn.prepareStatement(updateSql)) {
+                    int paramIndex = 1;
+                    if ("priority".equals(operation)) {
+                        updatePs.setString(paramIndex++, value);
+                    } else if ("status".equals(operation)) {
+                        updatePs.setBoolean(paramIndex++, "completed".equals(value));
+                    } else if ("dueDate".equals(operation)) {
+                        if (value != null && !value.isEmpty()) {
+                            long dueTime = Long.parseLong(value);
+                            updatePs.setTimestamp(paramIndex++, new Timestamp(dueTime));
+                        } else {
+                            updatePs.setNull(paramIndex++, Types.TIMESTAMP);
+                        }
+                    } else if ("assignee".equals(operation)) {
+                        if (value != null && !value.isEmpty()) {
+                            updatePs.setInt(paramIndex++, Integer.parseInt(value));
+                        } else {
+                            updatePs.setNull(paramIndex++, Types.INTEGER);
+                        }
+                    }
+
+                    for (int i = 0; i < allowedIds.size(); i++) {
+                        updatePs.setInt(paramIndex + i, allowedIds.get(i));
+                    }
+
+                    int updated = updatePs.executeUpdate();
+                    resp.getWriter().write("{\"success\":true, \"updatedCount\":" + updated + ", \"totalCount\":" + allowedIds.size() + "}");
+                }
+            }
+        } catch (com.fasterxml.jackson.databind.JsonMappingException | com.fasterxml.jackson.core.JsonParseException e) {
+            System.err.println("JSON Parsing Error (Batch): " + e.getMessage());
+            resp.setStatus(400);
+            resp.getWriter().write("{\"success\":false, \"message\":\"请求格式错误\"}");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            resp.setStatus(500);
+            resp.getWriter().write("{\"success\":false, \"message\":\"数据库错误\"}");
+        } catch (NumberFormatException e) {
+            resp.setStatus(400);
+            resp.getWriter().write("{\"success\":false, \"message\":\"参数格式错误\"}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            resp.setStatus(500);
+            resp.getWriter().write("{\"success\":false, \"message\":\"内部服务器错误\"}");
         }
     }
 

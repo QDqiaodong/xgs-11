@@ -117,13 +117,37 @@ public class TaskServlet extends HttpServlet {
         String pathInfo = req.getPathInfo();
         if (pathInfo == null || pathInfo.length() < 2) {
             resp.setStatus(400);
+            resp.getWriter().write("{\"success\":false, \"message\":\"Invalid request\"}");
             return;
         }
         
         try {
             int taskId = Integer.parseInt(pathInfo.substring(1));
+            
+            String checkSql = "SELECT user_id, assignee_id FROM tasks WHERE id = ?";
+            try (Connection conn = DBUtil.getConnection();
+                 PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
+                checkPs.setInt(1, taskId);
+                try (ResultSet rs = checkPs.executeQuery()) {
+                    if (!rs.next()) {
+                        resp.setStatus(404);
+                        resp.getWriter().write("{\"success\":false, \"message\":\"Task not found\"}");
+                        return;
+                    }
+                    int ownerId = rs.getInt("user_id");
+                    Integer assigneeId = (Integer) rs.getObject("assignee_id");
+                    boolean isOwner = ownerId == user.getId();
+                    boolean isAssignee = assigneeId != null && assigneeId == user.getId();
+                    if (!isOwner && !isAssignee) {
+                        resp.setStatus(403);
+                        resp.getWriter().write("{\"success\":false, \"message\":\"Permission denied: only creator or assignee can update this task\"}");
+                        return;
+                    }
+                }
+            }
+            
             Task task = objectMapper.readValue(req.getReader(), Task.class);
-            String sql = "UPDATE tasks SET assignee_id = ?, text = ?, completed = ?, priority = ?, due_date = ? WHERE id = ?";
+            String sql = "UPDATE tasks SET assignee_id = ?, text = ?, completed = ?, priority = ?, due_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
             try (Connection conn = DBUtil.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setObject(1, task.getAssigneeId());
@@ -159,25 +183,56 @@ public class TaskServlet extends HttpServlet {
         User user = (User) req.getSession().getAttribute("user");
         if (user == null) {
             resp.setStatus(401);
+            resp.getWriter().write("{\"success\":false, \"message\":\"Unauthorized\"}");
             return;
         }
 
         String pathInfo = req.getPathInfo();
         if (pathInfo == null || pathInfo.length() < 2) {
             resp.setStatus(400);
+            resp.getWriter().write("{\"success\":false, \"message\":\"Invalid request\"}");
             return;
         }
-        int taskId = Integer.parseInt(pathInfo.substring(1));
 
-        String sql = "DELETE FROM tasks WHERE id = ?";
-        try (Connection conn = DBUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, taskId);
-            ps.executeUpdate();
-            resp.getWriter().write("{\"success\":true}");
+        try {
+            int taskId = Integer.parseInt(pathInfo.substring(1));
+
+            String checkSql = "SELECT user_id, assignee_id FROM tasks WHERE id = ?";
+            try (Connection conn = DBUtil.getConnection();
+                 PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
+                checkPs.setInt(1, taskId);
+                try (ResultSet rs = checkPs.executeQuery()) {
+                    if (!rs.next()) {
+                        resp.setStatus(404);
+                        resp.getWriter().write("{\"success\":false, \"message\":\"Task not found\"}");
+                        return;
+                    }
+                    int ownerId = rs.getInt("user_id");
+                    Integer assigneeId = (Integer) rs.getObject("assignee_id");
+                    boolean isOwner = ownerId == user.getId();
+                    boolean isAssignee = assigneeId != null && assigneeId == user.getId();
+                    if (!isOwner && !isAssignee) {
+                        resp.setStatus(403);
+                        resp.getWriter().write("{\"success\":false, \"message\":\"Permission denied: only creator or assignee can delete this task\"}");
+                        return;
+                    }
+                }
+            }
+
+            String sql = "DELETE FROM tasks WHERE id = ?";
+            try (Connection conn = DBUtil.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, taskId);
+                ps.executeUpdate();
+                resp.getWriter().write("{\"success\":true}");
+            }
+        } catch (NumberFormatException e) {
+            resp.setStatus(400);
+            resp.getWriter().write("{\"success\":false, \"message\":\"Invalid task ID\"}");
         } catch (SQLException e) {
             e.printStackTrace();
-            resp.setStatus(400);
+            resp.setStatus(500);
+            resp.getWriter().write("{\"success\":false, \"message\":\"Database error\"}");
         }
     }
 }

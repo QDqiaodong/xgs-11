@@ -180,7 +180,7 @@
 </template>
 
 <script>
-const { ref, onMounted, computed, reactive, inject } = Vue;
+const { ref, onMounted, computed, reactive, inject, watch } = Vue;
 
 export default {
   emits: ['logout', 'goto-schedule'],
@@ -309,6 +309,16 @@ export default {
         const start = (currentPage.value - 1) * pageSize;
         return filteredTasks.value.slice(start, start + pageSize);
     });
+
+    watch(
+      [() => filters.value.status, () => filters.value.priority, () => filters.value.role, () => filters.value.keyword, sortBy, sortOrder],
+      () => {
+        const maxPage = Math.max(1, Math.ceil(filteredTasks.value.length / pageSize));
+        if (currentPage.value > maxPage) {
+          currentPage.value = maxPage;
+        }
+      }
+    );
 
     onMounted(fetchTasks);
 

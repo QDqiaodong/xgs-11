@@ -22,16 +22,16 @@ export function isNearExpiry(timestamp) {
     return diff > 0 && diff < 24 * 60 * 60 * 1000;
 }
 
+export function isOverdue(timestamp) {
+    if (!timestamp) return false;
+    return new Date(timestamp) < new Date();
+}
+
 export function isDueToday(timestamp) {
     if (!timestamp) return false;
     const now = new Date();
     const due = new Date(timestamp);
-    return now.toDateString() === due.toDateString();
-}
-
-export function isOverdue(timestamp) {
-    if (!timestamp) return false;
-    return new Date(timestamp) < new Date();
+    return now.toDateString() === due.toDateString() && !isOverdue(timestamp);
 }
 
 export function isDueWithin24h(timestamp) {
@@ -42,12 +42,22 @@ export function isDueWithin24h(timestamp) {
     return diff > 0 && diff <= 24 * 60 * 60 * 1000;
 }
 
+export function isDueWithin24hButNotToday(timestamp) {
+    if (!timestamp) return false;
+    return isDueWithin24h(timestamp) && !isDueToday(timestamp);
+}
+
 export function isDueWithin3Days(timestamp) {
     if (!timestamp) return false;
     const now = new Date();
     const due = new Date(timestamp);
     const diff = due - now;
     return diff > 0 && diff <= 3 * 24 * 60 * 60 * 1000;
+}
+
+export function isDueWithin3DaysButNot24h(timestamp) {
+    if (!timestamp) return false;
+    return isDueWithin3Days(timestamp) && !isDueWithin24h(timestamp);
 }
 
 export function getTaskRiskLevel(task) {
@@ -151,4 +161,14 @@ export function formatDateTimeLocal(timestamp) {
     const h = String(d.getHours()).padStart(2, '0');
     const min = String(d.getMinutes()).padStart(2, '0');
     return `${y}-${m}-${day}T${h}:${min}`;
+}
+
+export function getTaskResponsibility(task, currentUser) {
+    if (!task || !currentUser) return 'none';
+    const isCreator = task.userId === currentUser.id;
+    const isAssignee = task.assigneeId === currentUser.id;
+    if (isCreator && isAssignee) return 'self';
+    if (isCreator) return 'creator';
+    if (isAssignee) return 'assignee';
+    return 'none';
 }

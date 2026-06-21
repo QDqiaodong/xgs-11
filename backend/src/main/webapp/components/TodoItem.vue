@@ -15,8 +15,13 @@
       <div v-if="!isEditing" class="view-layout">
         <div class="task-header-row">
           <h4 class="task-main-text">{{ task.text }}</h4>
-          <div :class="['priority-dot-badge', `dot-${task.priority}`]">
-            <span class="dot"></span> {{ priorityLabel }}
+          <div class="task-badges">
+            <span v-if="responsibility !== 'none'" :class="['resp-badge', `resp-${responsibility}`]">
+              {{ responsibilityLabel }}
+            </span>
+            <div :class="['priority-dot-badge', `dot-${task.priority}`]">
+              <span class="dot"></span> {{ priorityLabel }}
+            </div>
           </div>
         </div>
         
@@ -100,6 +105,11 @@ export default {
       const labels = { high: '紧急', medium: '普通', low: '次要' };
       return labels[props.task.priority] || props.task.priority;
     });
+    const responsibility = computed(() => utils.getTaskResponsibility(props.task, props.currentUser));
+    const responsibilityLabel = computed(() => {
+      const labels = { creator: '我创建', assignee: '指派给我', self: '自办', none: '' };
+      return labels[responsibility.value] || '';
+    });
 
     const toggleStatus = async () => {
       try {
@@ -173,7 +183,8 @@ export default {
 
     return { 
         isEditing, editData, riskLevel, riskLabel, formatTime, personLabel,
-        toggleStatus, startEdit, cancelEdit, saveEdit, priorityLabel
+        toggleStatus, startEdit, cancelEdit, saveEdit, priorityLabel,
+        responsibility, responsibilityLabel
     };
   }
 }

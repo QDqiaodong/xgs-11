@@ -82,7 +82,7 @@
         </section>
 
         <section class="overview-stats">
-          <TaskStats :tasks="tasks" :currentUser="currentUser" />
+          <TaskStats :tasks="tasks" :currentUser="currentUser" @filter="handleStatFilter" />
         </section>
 
         <section class="task-board">
@@ -196,7 +196,9 @@ export default {
       keyword: '',
       status: 'all',
       priority: 'all',
-      role: 'all'
+      role: 'all',
+      dueDate: 'all',
+      responsibility: 'all'
     });
 
     const newTask = reactive({
@@ -312,7 +314,29 @@ export default {
         const matchStatus = f.status === 'all' || (f.status === 'completed' ? t.completed : !t.completed);
         const matchPriority = f.priority === 'all' || t.priority === f.priority;
         const matchRole = f.role === 'all' || (f.role === 'mine' ? t.userId === currentUser.value.id : t.assigneeId === currentUser.value.id);
-        return matchKeyword && matchStatus && matchPriority && matchRole;
+        
+        let matchDueDate = true;
+        if (f.dueDate !== 'all') {
+          if (f.dueDate === 'overdue') {
+            matchDueDate = !t.completed && utils.isOverdue(t.dueDate);
+          } else if (f.dueDate === 'dueToday') {
+            matchDueDate = !t.completed && utils.isDueToday(t.dueDate);
+          } else if (f.dueDate === 'within24h') {
+            matchDueDate = !t.completed && utils.isDueWithin24hButNotToday(t.dueDate);
+          } else if (f.dueDate === 'within3d') {
+            matchDueDate = !t.completed && utils.isDueWithin3DaysButNot24h(t.dueDate);
+          } else if (f.dueDate === 'normal') {
+            matchDueDate = !t.completed && !utils.isOverdue(t.dueDate) && !utils.isDueWithin3Days(t.dueDate);
+          }
+        }
+        
+        let matchResponsibility = true;
+        if (f.responsibility !== 'all') {
+          const resp = utils.getTaskResponsibility(t, currentUser.value);
+          matchResponsibility = resp === f.responsibility;
+        }
+        
+        return matchKeyword && matchStatus && matchPriority && matchRole && matchDueDate && matchResponsibility;
       });
 
       result.sort((a, b) => {
@@ -349,8 +373,24 @@ export default {
         return filteredTasks.value.slice(start, start + pageSize);
     });
 
+    const handleStatFilter = (filterInfo) => {
+      const type = filterInfo.type;
+      const dueDateTypes = ['all', 'completed', 'overdue', 'dueToday', 'within24h', 'within3d', 'normal'];
+      const responsibilityTypes = ['creator', 'assignee', 'self'];
+      
+      if (type === 'all') {
+        filters.value = { ...filters.value, status: 'all', dueDate: 'all', responsibility: 'all' };
+      } else if (type === 'completed') {
+        filters.value = { ...filters.value, status: 'completed', dueDate: 'all', responsibility: 'all' };
+      } else if (dueDateTypes.includes(type)) {
+        filters.value = { ...filters.value, status: 'pending', dueDate: type, responsibility: 'all' };
+      } else if (responsibilityTypes.includes(type)) {
+        filters.value = { ...filters.value, status: 'all', dueDate: 'all', responsibility: type };
+      }
+    };
+
     watch(
-      [() => filters.value.status, () => filters.value.priority, () => filters.value.role, () => filters.value.keyword, sortBy, sortOrder],
+      [() => filters.value.status, () => filters.value.priority, () => filters.value.role, () => filters.value.keyword, () => filters.value.dueDate, () => filters.value.responsibility, sortBy, sortOrder],
       () => {
         const maxPage = Math.max(1, Math.ceil(filteredTasks.value.length / pageSize));
         if (currentPage.value > maxPage) {
@@ -364,7 +404,7 @@ export default {
     return {
       tasks, currentUser, filters, newTask, showAddModal, handleAddTask, fetchTasks,
       confirmDelete, deleteConfirmId, handleDelete, filteredTasks, sortBy, sortOrder,
-      currentPage, pageSize, totalPages, paginatedTasks
+      currentPage, pageSize, totalPages, paginatedTasks, handleStatFilter
     };
   }
 }

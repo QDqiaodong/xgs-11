@@ -338,6 +338,39 @@ body {
 .dot-low { color: var(--success); background: #f0fdf4; }
 .dot-low .dot { background: var(--success); }
 
+.task-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.resp-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.resp-creator {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.resp-assignee {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.resp-self {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
 .task-meta-footer { display: flex; align-items: center; gap: 1.25rem; }
 .meta-item { display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; }
 .meta-dot { width: 4px; height: 4px; border-radius: 50%; background: #cbd5e1; }
@@ -830,7 +863,7 @@ body {
 /* Styles from TaskStats.vue */
 .stats-premium-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   grid-template-rows: auto auto;
   gap: 1.5rem;
 }
@@ -847,6 +880,29 @@ body {
   min-height: 180px;
 }
 
+.stat-widget.clickable {
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-widget.clickable:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary);
+}
+
+.chip.clickable {
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  margin: -0.5rem -0.75rem;
+}
+
+.chip.clickable:hover {
+  background: #f1f5f9;
+}
+
 .widget-icon {
   width: 44px; height: 44px;
   border-radius: 12px;
@@ -860,6 +916,7 @@ body {
 .danger { background: #fee2e2; color: var(--danger); }
 .urgent-widget-icon { background: #fff7ed; color: var(--urgent); }
 .soon-widget-icon { background: #dbeafe; color: var(--soon); }
+.today-icon { background: #fef3c7; color: #d97706; }
 
 .widget-data { display: flex; flex-direction: column; gap: 0.1rem; }
 .widget-label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); opacity: 0.8; }
@@ -871,6 +928,7 @@ body {
 .danger-text { color: var(--danger); opacity: 1; }
 .urgent-text { color: var(--urgent); opacity: 1; }
 .soon-text { color: var(--soon); opacity: 1; }
+.today-text { color: #d97706; opacity: 1; }
 
 .user-summary-card {
   grid-column: span 2;

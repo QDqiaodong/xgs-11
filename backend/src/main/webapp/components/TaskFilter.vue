@@ -40,6 +40,36 @@
       </div>
 
       <div class="filter-item">
+        <label>到期时间</label>
+        <select 
+          :value="modelValue.dueDate" 
+          @change="updateFilter('dueDate', $event.target.value)"
+          class="input select-input"
+        >
+          <option value="all">全部</option>
+          <option value="overdue">已逾期</option>
+          <option value="dueToday">今日到期</option>
+          <option value="within24h">24小时内</option>
+          <option value="within3d">3天内</option>
+          <option value="normal">普通待办</option>
+        </select>
+      </div>
+
+      <div class="filter-item">
+        <label>责任</label>
+        <select 
+          :value="modelValue.responsibility" 
+          @change="updateFilter('responsibility', $event.target.value)"
+          class="input select-input"
+        >
+          <option value="all">全部责任</option>
+          <option value="creator">我创建</option>
+          <option value="assignee">指派给我</option>
+          <option value="self">我创建且自办</option>
+        </select>
+      </div>
+
+      <div class="filter-item">
         <label>归属</label>
         <select 
           :value="modelValue.role" 

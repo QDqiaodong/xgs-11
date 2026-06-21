@@ -1,6 +1,6 @@
 <template>
   <div class="stats-premium-grid">
-    <div class="stat-widget glass">
+    <div class="stat-widget glass clickable" @click="$emit('filter', { type: 'all' })">
       <div class="widget-icon primary">📊</div>
       <div class="widget-data">
         <span class="widget-label">任务总量</span>
@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <div class="stat-widget glass">
+    <div class="stat-widget glass clickable" @click="$emit('filter', { type: 'completed' })">
       <div class="widget-icon success">✅</div>
       <div class="widget-data">
         <span class="widget-label">已达成</span>
@@ -22,7 +22,7 @@
       </div>
     </div>
 
-    <div class="stat-widget glass">
+    <div class="stat-widget glass clickable" @click="$emit('filter', { type: 'overdue' })">
       <div class="widget-icon danger">🚨</div>
       <div class="widget-data">
         <span class="widget-label">已逾期</span>
@@ -33,29 +33,40 @@
       </div>
     </div>
 
-    <div class="stat-widget glass">
+    <div class="stat-widget glass clickable" @click="$emit('filter', { type: 'dueToday' })">
+      <div class="widget-icon today-icon">🌟</div>
+      <div class="widget-data">
+        <span class="widget-label">今日到期</span>
+        <span class="widget-value">{{ dueTodayCount }}</span>
+      </div>
+      <div class="widget-trend today-text">
+        <span>今日必须完成</span>
+      </div>
+    </div>
+
+    <div class="stat-widget glass clickable" @click="$emit('filter', { type: 'within24h' })">
       <div class="widget-icon urgent-widget-icon">⚡</div>
       <div class="widget-data">
-        <span class="widget-label">24小时内到期</span>
-        <span class="widget-value">{{ urgentCount }}</span>
+        <span class="widget-label">24小时内</span>
+        <span class="widget-value">{{ within24hCount }}</span>
       </div>
       <div class="widget-trend urgent-text">
         <span>即将到期</span>
       </div>
     </div>
 
-    <div class="stat-widget glass">
+    <div class="stat-widget glass clickable" @click="$emit('filter', { type: 'within3d' })">
       <div class="widget-icon soon-widget-icon">📅</div>
       <div class="widget-data">
         <span class="widget-label">3天内到期</span>
-        <span class="widget-value">{{ soonCount }}</span>
+        <span class="widget-value">{{ within3dCount }}</span>
       </div>
       <div class="widget-trend soon-text">
         <span>近期关注</span>
       </div>
     </div>
 
-    <div class="stat-widget glass">
+    <div class="stat-widget glass clickable" @click="$emit('filter', { type: 'normal' })">
       <div class="widget-icon primary">📋</div>
       <div class="widget-data">
         <span class="widget-label">普通待办</span>
@@ -89,13 +100,17 @@
         </div>
         
         <div class="summary-chips">
-          <div class="chip">
+          <div class="chip clickable" @click="$emit('filter', { type: 'creator' })">
             <span class="c-label">我发起的</span>
             <span class="c-val">{{ myCreated }}</span>
           </div>
-          <div class="chip">
+          <div class="chip clickable" @click="$emit('filter', { type: 'assignee' })">
             <span class="c-label">指派给我</span>
             <span class="c-val">{{ myAssigned }}</span>
+          </div>
+          <div class="chip clickable" @click="$emit('filter', { type: 'self' })">
+            <span class="c-label">自办任务</span>
+            <span class="c-val">{{ mySelfTasks }}</span>
           </div>
         </div>
       </div>
@@ -108,15 +123,18 @@ const { computed } = Vue;
 
 export default {
   props: ['tasks', 'currentUser'],
+  emits: ['filter'],
   setup(props) {
     const completedCount = computed(() => props.tasks.filter(t => t.completed).length);
     const overdueCount = computed(() => props.tasks.filter(t => !t.completed && utils.isOverdue(t.dueDate)).length);
-    const urgentCount = computed(() => props.tasks.filter(t => !t.completed && utils.isDueWithin24h(t.dueDate)).length);
-    const soonCount = computed(() => props.tasks.filter(t => !t.completed && utils.isDueWithin3Days(t.dueDate) && !utils.isDueWithin24h(t.dueDate)).length);
-    const normalCount = computed(() => props.tasks.filter(t => !t.completed && !utils.isOverdue(t.dueDate) && !utils.isDueWithin24h(t.dueDate) && !utils.isDueWithin3Days(t.dueDate)).length);
+    const dueTodayCount = computed(() => props.tasks.filter(t => !t.completed && utils.isDueToday(t.dueDate)).length);
+    const within24hCount = computed(() => props.tasks.filter(t => !t.completed && utils.isDueWithin24hButNotToday(t.dueDate)).length);
+    const within3dCount = computed(() => props.tasks.filter(t => !t.completed && utils.isDueWithin3DaysButNot24h(t.dueDate)).length);
+    const normalCount = computed(() => props.tasks.filter(t => !t.completed && !utils.isOverdue(t.dueDate) && !utils.isDueWithin3Days(t.dueDate)).length);
     
     const myCreated = computed(() => props.tasks.filter(t => t.userId === props.currentUser?.id).length);
     const myAssigned = computed(() => props.tasks.filter(t => t.assigneeId === props.currentUser?.id).length);
+    const mySelfTasks = computed(() => props.tasks.filter(t => t.userId === props.currentUser?.id && t.assigneeId === props.currentUser?.id).length);
     
     const completionRate = computed(() => {
         const myTasks = props.tasks.filter(t => t.userId === props.currentUser?.id || t.assigneeId === props.currentUser?.id);
@@ -125,7 +143,7 @@ export default {
         return Math.round((done / myTasks.length) * 100);
     });
 
-    return { completedCount, overdueCount, urgentCount, soonCount, normalCount, myCreated, myAssigned, completionRate };
+    return { completedCount, overdueCount, dueTodayCount, within24hCount, within3dCount, normalCount, myCreated, myAssigned, mySelfTasks, completionRate };
   }
 }
 </script>

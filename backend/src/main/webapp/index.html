@@ -18,6 +18,8 @@
                 @login-success="handleLoginSuccess"
                 @goto-register="currentView = 'Register'"
                 @goto-login="currentView = 'Login'"
+                @goto-list="currentView = 'TodoList'"
+                @goto-schedule="currentView = 'ScheduleView'"
                 @logout="handleLogout"
                 v-if="!loading"
             ></component>
@@ -112,7 +114,8 @@
         // Register all components as .vue files via vue3-sfc-loader
         const componentNames = [
             'Login', 'Register', 'TodoList', 'TodoItem',
-            'TaskFilter', 'TaskStats', 'UserSelect', 'TodayFocus'
+            'TaskFilter', 'TaskStats', 'UserSelect', 'TodayFocus',
+            'ScheduleView'
         ];
 
         for (const name of componentNames) {

@@ -10,6 +10,20 @@
       
       <nav class="sidebar-nav">
         <div class="nav-section">
+          <p class="section-title">页面导航</p>
+          <div class="nav-buttons">
+            <button class="nav-btn nav-btn-active">
+              <span class="nav-icon">📋</span>
+              <span>任务列表</span>
+            </button>
+            <button @click="$emit('goto-schedule')" class="nav-btn">
+              <span class="nav-icon">📅</span>
+              <span>日程视图</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="nav-section">
           <p class="section-title">任务控制</p>
           <div class="sidebar-controls">
             <TaskFilter v-model="filters" @add="showAddModal = true" />
@@ -169,7 +183,7 @@
 const { ref, onMounted, computed, reactive, inject } = Vue;
 
 export default {
-  emits: ['logout'],
+  emits: ['logout', 'goto-schedule'],
   inject: ['showToast'],
   setup() {
     const tasks = ref([]);

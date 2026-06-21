@@ -7,7 +7,7 @@ services:
       MYSQL_DATABASE: todo_app
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     ports:
-      - "127.0.0.1:${MYSQL_HOST_PORT:-33111}:3306"
+      - "127.0.0.1:${MYSQL_HOST_PORT:-33121}:3306"
     volumes:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
       - todo-db-data:/var/lib/mysql
@@ -19,31 +19,16 @@ services:
     networks:
       - todo-network
 
-  db-migrate:
-    image: mysql:8.0
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-    volumes:
-      - ./database/init.sql:/migrations/init.sql:ro
-    networks:
-      - todo-network
-    command: >
-      sh -c 'mysql -h db -uroot -p"$${MYSQL_ROOT_PASSWORD}" < /migrations/init.sql'
-    restart: "no"
-
   app:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: xgs-11-app
     ports:
-      - "127.0.0.1:${APP_HOST_PORT:-18111}:8080"
+      - "127.0.0.1:${APP_HOST_PORT:-18121}:8080"
     depends_on:
-      db-migrate:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
     networks:
       - todo-network
     environment:

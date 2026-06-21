@@ -57,3 +57,68 @@ export function getTaskRiskLevel(task) {
     if (isDueWithin3Days(task.dueDate)) return 'soon';
     return 'normal';
 }
+
+export function getWeekDates(refDate = new Date()) {
+    const d = new Date(refDate);
+    d.setHours(0, 0, 0, 0);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + diff);
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + i);
+        dates.push(date);
+    }
+    return dates;
+}
+
+export function isSameDay(date1, date2) {
+    if (!date1 || !date2) return false;
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    d1.setHours(0, 0, 0, 0);
+    d2.setHours(0, 0, 0, 0);
+    return d1.getTime() === d2.getTime();
+}
+
+export function formatDateShort(timestamp) {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const h = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    return `${h}:${min}`;
+}
+
+export function formatWeekDay(date) {
+    const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    return days[date.getDay()];
+}
+
+export function formatMonthDay(date) {
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${m}/${d}`;
+}
+
+export function isToday(date) {
+    return isSameDay(date, new Date());
+}
+
+export function addWeeks(date, n) {
+    const d = new Date(date);
+    d.setDate(d.getDate() + n * 7);
+    return d;
+}
+
+export function getWeekRangeText(dates) {
+    if (!dates || dates.length === 0) return '';
+    const first = dates[0];
+    const last = dates[dates.length - 1];
+    const m1 = first.getMonth() + 1;
+    const d1 = first.getDate();
+    const m2 = last.getMonth() + 1;
+    const d2 = last.getDate();
+    return `${m1}月${d1}日 - ${m2}月${d2}日`;
+}

@@ -6,14 +6,14 @@ WORKDIR /app
 RUN mkdir -p /root/.m2 && echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd"><mirrors><mirror><id>aliyunmaven</id><mirrorOf>*</mirrorOf><name>aliyun maven</name><url>https://maven.aliyun.com/repository/public</url></mirror></mirrors></settings>' > /root/.m2/settings.xml
 
 COPY pom.xml ./
-RUN --mount=type=cache,target=/root/.m2 mvn -B -ntp dependency:go-offline
-RUN --mount=type=cache,target=/root/.m2 mvn -B -ntp dependency:copy \
+RUN mvn -B -ntp dependency:go-offline
+RUN mvn -B -ntp dependency:copy \
     -Dartifact=org.eclipse.jetty:jetty-runner:9.4.46.v20220331 \
     -DoutputDirectory=/app/deps \
     -Dmdep.stripVersion=true
 
 COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 mvn -B -ntp package -DskipTests
+RUN mvn -B -ntp package -DskipTests
 
 # Run stage. Reuse the Maven/Temurin image already needed for builds, avoiding
 # an extra Tomcat base image pull on machines with restricted registry access.

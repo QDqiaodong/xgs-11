@@ -1564,6 +1564,13 @@ body {
   font-weight: 700;
 }
 
+.person-mini-text {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .assignee-text, .creator-text {
   font-size: 0.7rem;
   font-weight: 600;

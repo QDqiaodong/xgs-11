@@ -41,6 +41,7 @@
                   <span :class="['priority-mini-tag', `mini-${task.priority}`]">
                     {{ priorityLabel(task.priority) }}
                   </span>
+                  <span v-if="getPersonLabel(task)" class="person-mini-text">👤 {{ getPersonLabel(task) }}</span>
                   <span class="due-text danger-text">{{ formatTime(task.dueDate) }}</span>
                 </div>
               </div>
@@ -78,6 +79,7 @@
                   <span :class="['priority-mini-tag', `mini-${task.priority}`]">
                     {{ priorityLabel(task.priority) }}
                   </span>
+                  <span v-if="getPersonLabel(task)" class="person-mini-text">👤 {{ getPersonLabel(task) }}</span>
                   <span class="due-text urgent-text">{{ formatTime(task.dueDate) }}</span>
                 </div>
               </div>
@@ -115,6 +117,7 @@
                   <span :class="['priority-mini-tag', `mini-${task.priority}`]">
                     {{ priorityLabel(task.priority) }}
                   </span>
+                  <span v-if="getPersonLabel(task)" class="person-mini-text">👤 {{ getPersonLabel(task) }}</span>
                   <span class="due-text soon-text">{{ formatTime(task.dueDate) }}</span>
                 </div>
               </div>
@@ -152,6 +155,7 @@
                   <span :class="['priority-mini-tag', `mini-${task.priority}`]">
                     {{ priorityLabel(task.priority) }}
                   </span>
+                  <span v-if="getPersonLabel(task)" class="person-mini-text">👤 {{ getPersonLabel(task) }}</span>
                   <span v-if="task.dueDate" class="due-text">{{ formatTime(task.dueDate) }}</span>
                 </div>
               </div>
@@ -224,6 +228,8 @@ export default {
       return labels[priority] || priority;
     };
 
+    const getPersonLabel = (task) => utils.formatTaskPerson(task, props.currentUser);
+
     const toggleTask = async (task) => {
       try {
         await axios.put(`/api/tasks/${task.id}`, {
@@ -247,6 +253,7 @@ export default {
       totalPending,
       formatTime,
       priorityLabel,
+      getPersonLabel,
       toggleTask
     };
   }

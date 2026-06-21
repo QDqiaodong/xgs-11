@@ -137,11 +137,8 @@
                     <span v-if="task.dueDate" class="task-due-time">
                       ⏰ {{ utils.formatDateShort(task.dueDate) }}
                     </span>
-                    <span v-if="task.assigneeName" class="task-assignee" :title="'指派人: ' + task.assigneeName">
-                      👤 {{ task.assigneeName }}
-                    </span>
-                    <span v-else-if="task.userId !== currentUser?.id" class="task-assignee" :title="'创建人: ' + task.username">
-                      👤 {{ task.username }}
+                    <span v-if="getPersonLabel(task)" class="task-assignee" :title="getPersonLabel(task)">
+                      👤 {{ getPersonLabel(task) }}
                     </span>
                   </div>
                   <div class="task-actions-row">
@@ -193,14 +190,8 @@
                   {{ task.text }}
                 </div>
                 <div class="task-meta-row">
-                  <span v-if="task.assigneeName" class="task-assignee" :title="'指派人: ' + task.assigneeName">
-                    👤 {{ task.assigneeName }}
-                  </span>
-                  <span v-else-if="task.userId !== currentUser?.id" class="task-assignee" :title="'创建人: ' + task.username">
-                    👤 {{ task.username }}
-                  </span>
-                  <span v-if="task.userId === currentUser?.id" class="task-creator">
-                    ✏️ 我创建的
+                  <span v-if="getPersonLabel(task)" class="task-assignee" :title="getPersonLabel(task)">
+                    👤 {{ getPersonLabel(task) }}
                   </span>
                 </div>
                 <div class="task-actions-row">
@@ -342,6 +333,8 @@ export default {
 
     const priorityText = (p) => ({ high: '紧急', medium: '普通', low: '较低' }[p] || '普通');
 
+    const getPersonLabel = (task) => utils.formatTaskPerson(task, currentUser.value);
+
     const prevWeek = () => { weekRef.value = utils.addWeeks(weekRef.value, -1); };
     const nextWeek = () => { weekRef.value = utils.addWeeks(weekRef.value, 1); };
     const goToThisWeek = () => { weekRef.value = new Date(); };
@@ -376,7 +369,15 @@ export default {
     const openScheduleModal = (task, day) => {
       editingTask.value = task;
       selectedTaskId.value = task ? task.id : '';
-      if (day) {
+      if (task && task.dueDate) {
+        const d = new Date(task.dueDate);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const h = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        scheduleForm.value = { date: `${y}-${m}-${dd}`, time: `${h}:${min}` };
+      } else if (day) {
         const y = day.getFullYear();
         const m = String(day.getMonth() + 1).padStart(2, '0');
         const d = String(day.getDate()).padStart(2, '0');
@@ -455,7 +456,7 @@ export default {
       tasks, currentUser, weekDates, weekRangeText, isCurrentWeek,
       filterRole, filterPriority, filterStatus,
       unscheduledTasks, availableUnscheduledTasks,
-      getTasksForDay, isTaskOverdue, priorityText,
+      getTasksForDay, isTaskOverdue, priorityText, getPersonLabel,
       prevWeek, nextWeek, goToThisWeek,
       toggleTask, clearDueDate,
       showScheduleModal, editingTask, selectedTaskId, scheduleForm,

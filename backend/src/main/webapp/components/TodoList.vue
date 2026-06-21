@@ -277,15 +277,26 @@ export default {
       });
 
       result.sort((a, b) => {
-        let valA = a[sortBy.value];
-        let valB = b[sortBy.value];
+        let valA, valB;
         
         if (sortBy.value === 'priority') {
             const weights = { high: 3, medium: 2, low: 1 };
-            valA = weights[a.priority];
-            valB = weights[b.priority];
+            valA = weights[a.priority] || 0;
+            valB = weights[b.priority] || 0;
+        } else if (sortBy.value === 'due_date') {
+            const aHas = a.dueDate != null;
+            const bHas = b.dueDate != null;
+            if (!aHas && !bHas) return 0;
+            if (!aHas) return 1;
+            if (!bHas) return -1;
+            valA = new Date(a.dueDate).getTime();
+            valB = new Date(b.dueDate).getTime();
+        } else {
+            valA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            valB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         }
 
+        if (valA === valB) return 0;
         if (sortOrder.value === 'asc') return valA > valB ? 1 : -1;
         return valA < valB ? 1 : -1;
       });

@@ -23,7 +23,7 @@
         <div class="task-meta-footer">
           <div class="meta-item">
             <span class="meta-icon">👤</span>
-            <span class="meta-text">{{ task.assigneeName || '未指派' }}</span>
+            <span class="meta-text">{{ personLabel }}</span>
           </div>
           <div class="meta-dot"></div>
           <div :class="['meta-item', `status-${riskLevel}`]">
@@ -86,7 +86,7 @@ export default {
       text: props.task.text,
       priority: props.task.priority,
       assigneeId: props.task.assigneeId,
-      due_date: props.task.dueDate ? new Date(props.task.dueDate + 8 * 3600000).toISOString().slice(0, 16) : ''
+      due_date: utils.formatDateTimeLocal(props.task.dueDate)
     });
 
     const riskLevel = computed(() => utils.getTaskRiskLevel(props.task));
@@ -95,6 +95,7 @@ export default {
       return labels[riskLevel.value] || '';
     });
     const formatTime = (ts) => utils.formatDate(ts);
+    const personLabel = computed(() => utils.formatTaskPerson(props.task, props.currentUser));
     const priorityLabel = computed(() => {
       const labels = { high: '紧急', medium: '普通', low: '次要' };
       return labels[props.task.priority] || props.task.priority;
@@ -119,7 +120,7 @@ export default {
           text: props.task.text,
           priority: props.task.priority,
           assigneeId: props.task.assigneeId,
-          due_date: props.task.dueDate ? new Date(props.task.dueDate + 8 * 3600000).toISOString().slice(0, 16) : ''
+          due_date: utils.formatDateTimeLocal(props.task.dueDate)
       });
     };
 
@@ -127,6 +128,7 @@ export default {
       try {
         const payload = { 
             ...editData,
+            completed: props.task.completed,
             dueDate: editData.due_date ? new Date(editData.due_date).getTime() : null
         };
         await axios.put(`/api/tasks/${props.task.id}`, payload);
@@ -139,7 +141,7 @@ export default {
     };
 
     return { 
-        isEditing, editData, riskLevel, riskLabel, formatTime, 
+        isEditing, editData, riskLevel, riskLabel, formatTime, personLabel,
         toggleStatus, startEdit, cancelEdit, saveEdit, priorityLabel
     };
   }

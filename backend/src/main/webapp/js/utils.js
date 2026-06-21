@@ -122,3 +122,33 @@ export function getWeekRangeText(dates) {
     const d2 = last.getDate();
     return `${m1}月${d1}日 - ${m2}月${d2}日`;
 }
+
+export function getTaskPersonInfo(task, currentUser) {
+    if (!task || !currentUser) return null;
+    const isCreator = task.userId === currentUser.id;
+    const isAssignee = task.assigneeId === currentUser.id;
+    if (isCreator) {
+        if (task.assigneeId && !isAssignee) {
+            return { role: '执行人', name: task.assigneeName || '未知' };
+        }
+        return { role: '', name: '我自己' };
+    }
+    return { role: '指派人', name: task.username || '未知' };
+}
+
+export function formatTaskPerson(task, currentUser) {
+    const info = getTaskPersonInfo(task, currentUser);
+    if (!info) return '';
+    return info.role ? `${info.role} ${info.name}` : info.name;
+}
+
+export function formatDateTimeLocal(timestamp) {
+    if (!timestamp) return '';
+    const d = new Date(timestamp);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${day}T${h}:${min}`;
+}

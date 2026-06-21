@@ -172,3 +172,20 @@ export function getTaskResponsibility(task, currentUser) {
     if (isAssignee) return 'assignee';
     return 'none';
 }
+
+export function needsOverdueReason(task) {
+    if (!task || task.completed) return false;
+    return isOverdue(task.dueDate);
+}
+
+export function getOverdueReasonSummary(reason, maxLen = 24) {
+    if (!reason) return '';
+    const trimmed = String(reason).trim();
+    if (trimmed.length <= maxLen) return trimmed;
+    return trimmed.substring(0, maxLen) + '...';
+}
+
+export function wasCompletedOverdue(task) {
+    if (!task || !task.completed) return false;
+    return !!task.overdueReason;
+}

@@ -168,17 +168,27 @@
         </div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <OverdueReasonModal
+        v-if="overdueTask"
+        :task="overdueTask"
+        @submit="submitOverdueReason"
+        @cancel="overdueTask = null"
+      />
+    </Teleport>
   </div>
 </template>
 
 <script>
-const { computed, inject } = Vue;
+const { ref, computed, inject } = Vue;
 
 export default {
   props: ['tasks', 'currentUser'],
   emits: ['update'],
   setup(props, { emit }) {
     const showToast = inject('showToast');
+    const overdueTask = ref(null);
 
     const myRelatedTasks = computed(() => {
       if (!props.currentUser) return [];
@@ -230,19 +240,38 @@ export default {
 
     const getPersonLabel = (task) => utils.formatTaskPerson(task, props.currentUser);
 
-    const toggleTask = async (task) => {
+    const toggleTask = (task) => {
+      const targetCompleted = !task.completed;
+      if (targetCompleted && utils.needsOverdueReason(task)) {
+        overdueTask.value = task;
+        return;
+      }
+      doToggle(task, targetCompleted);
+    };
+
+    const doToggle = async (task, targetCompleted, reason) => {
       try {
-        await axios.put(`/api/tasks/${task.id}`, {
-          ...task,
-          completed: !task.completed
-        });
+        const payload = { ...task, completed: targetCompleted };
+        if (reason) payload.overdueReason = reason;
+        await axios.put(`/api/tasks/${task.id}`, payload);
         emit('update');
-        if (!task.completed) {
+        if (targetCompleted) {
           showToast('任务已完成 🎉', 'success');
         }
       } catch (e) {
-        showToast('状态更新失败', 'danger');
+        let msg = '状态更新失败';
+        if (e.response && e.response.data && e.response.data.message) {
+          msg = e.response.data.message;
+        }
+        showToast(msg, 'danger');
       }
+    };
+
+    const submitOverdueReason = async (reason) => {
+      const task = overdueTask.value;
+      if (!task) return;
+      overdueTask.value = null;
+      await doToggle(task, true, reason);
     };
 
     return {
@@ -254,7 +283,9 @@ export default {
       formatTime,
       priorityLabel,
       getPersonLabel,
-      toggleTask
+      toggleTask,
+      overdueTask,
+      submitOverdueReason
     };
   }
 }

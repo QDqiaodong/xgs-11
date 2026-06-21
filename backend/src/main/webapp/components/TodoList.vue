@@ -136,6 +136,8 @@
                 @update="fetchTasks"
                 @delete="confirmDelete"
                 @toggle-select="toggleTaskSelect"
+                @request-complete="requestComplete"
+                @show-detail="showDetail"
               />
             </transition-group>
             
@@ -282,6 +284,20 @@
           </div>
         </div>
       </div>
+
+      <OverdueReasonModal
+        v-if="overdueTask"
+        :task="overdueTask"
+        @submit="submitOverdueReason"
+        @cancel="overdueTask = null"
+      />
+
+      <TaskDetail
+        v-if="detailTask"
+        :task="detailTask"
+        :currentUser="currentUser"
+        @close="detailTask = null"
+      />
     </Teleport>
   </div>
 </template>
@@ -298,6 +314,9 @@ export default {
     const showAddModal = ref(false);
     const deleteConfirmId = ref(null);
     const showToast = inject('showToast');
+
+    const overdueTask = ref(null);
+    const detailTask = ref(null);
 
     const batchMode = ref(false);
     const selectedTaskIds = ref([]);
@@ -423,6 +442,37 @@ export default {
         }
         showToast(msg, 'danger');
       }
+    };
+
+    const requestComplete = (task) => {
+      overdueTask.value = task;
+    };
+
+    const submitOverdueReason = async (reason) => {
+      const task = overdueTask.value;
+      if (!task) return;
+      try {
+        await axios.put(`/api/tasks/${task.id}`, {
+          ...task,
+          completed: true,
+          overdueReason: reason
+        });
+        showToast('任务已完成 🎉', 'success');
+        overdueTask.value = null;
+        fetchTasks();
+      } catch (e) {
+        let msg = '完成失败';
+        if (e.response && e.response.status === 401) {
+          msg = '登录已过期，请重新登录';
+        } else if (e.response && e.response.data && e.response.data.message) {
+          msg = e.response.data.message;
+        }
+        showToast(msg, 'danger');
+      }
+    };
+
+    const showDetail = (task) => {
+      detailTask.value = task;
     };
 
     const enterBatchMode = () => {
@@ -650,7 +700,8 @@ export default {
       batchMode, selectedTaskIds, enterBatchMode, exitBatchMode, toggleTaskSelect,
       isAllSelected, toggleSelectAll, showBatchModal, batchOperation, batchFormData,
       batchOperationLabel, batchOperationIcon, selectedTasksPreview,
-      openBatchModal, closeBatchModal, executeBatchOperation, batchSubmitting
+      openBatchModal, closeBatchModal, executeBatchOperation, batchSubmitting,
+      overdueTask, detailTask, requestComplete, submitOverdueReason, showDetail
     };
   }
 }

@@ -46,6 +46,13 @@
             <span v-if="!task.completed && riskLevel !== 'normal'" :class="['risk-tag', `risk-${riskLevel}`]">{{ riskLabel }}</span>
           </div>
         </div>
+
+        <div v-if="task.overdueReason" class="overdue-reason-summary" @click="$emit('show-detail', task)" title="查看完整逾期原因">
+          <span class="ors-icon">📝</span>
+          <span class="ors-label">逾期原因：</span>
+          <span class="ors-text">{{ overdueReasonSummary }}</span>
+          <span class="ors-more">查看完整 ›</span>
+        </div>
       </div>
       
       <div v-else class="edit-layout">
@@ -66,6 +73,9 @@
 
     <div class="task-operations">
       <template v-if="!isEditing">
+        <button @click="showDetail" class="btn-op" title="详情">
+          <span>📄</span>
+        </button>
         <button @click="startEdit" class="btn-op" title="修改">
           <span>✏️</span>
         </button>
@@ -90,7 +100,7 @@ const { ref, reactive, computed, inject } = Vue;
 
 export default {
   props: ['task', 'currentUser', 'batchMode', 'selected'],
-  emits: ['update', 'delete', 'toggle-select'],
+  emits: ['update', 'delete', 'toggle-select', 'request-complete', 'show-detail'],
   inject: ['showToast'],
   setup(props, { emit }) {
     const isEditing = ref(false);
@@ -119,22 +129,32 @@ export default {
       const labels = { creator: '我创建', assignee: '指派给我', self: '自办', none: '' };
       return labels[responsibility.value] || '';
     });
+    const overdueReasonSummary = computed(() => utils.getOverdueReasonSummary(props.task.overdueReason));
 
     const toggleStatus = async () => {
+      const targetCompleted = !props.task.completed;
+      if (targetCompleted && utils.needsOverdueReason(props.task)) {
+        emit('request-complete', props.task);
+        return;
+      }
       try {
         await axios.put(`/api/tasks/${props.task.id}`, {
           ...props.task,
-          completed: !props.task.completed
+          completed: targetCompleted
         });
         emit('update');
       } catch (e) {
         let msg = '无法同步状态';
         if (e.response && e.response.status === 401) {
           msg = '登录已过期，请重新登录';
+        } else if (e.response && e.response.data && e.response.data.message) {
+          msg = e.response.data.message;
         }
         showToast(msg, 'danger');
       }
     };
+
+    const showDetail = () => emit('show-detail', props.task);
 
     const startEdit = () => { isEditing.value = true; };
     const cancelEdit = () => {
@@ -193,7 +213,7 @@ export default {
     return { 
         isEditing, editData, riskLevel, riskLabel, formatTime, personLabel,
         toggleStatus, startEdit, cancelEdit, saveEdit, priorityLabel,
-        responsibility, responsibilityLabel
+        responsibility, responsibilityLabel, overdueReasonSummary, showDetail
     };
   }
 }

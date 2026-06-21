@@ -250,6 +250,13 @@
           </form>
         </div>
       </div>
+
+      <OverdueReasonModal
+        v-if="overdueTask"
+        :task="overdueTask"
+        @submit="submitOverdueReason"
+        @cancel="overdueTask = null"
+      />
     </Teleport>
   </div>
 </template>
@@ -275,6 +282,7 @@ export default {
     const selectedTaskId = ref('');
     const scheduleForm = ref({ date: '', time: '' });
     const dragTaskId = ref(null);
+    const overdueTask = ref(null);
 
     const utils = window.utils;
 
@@ -339,18 +347,40 @@ export default {
     const nextWeek = () => { weekRef.value = utils.addWeeks(weekRef.value, 1); };
     const goToThisWeek = () => { weekRef.value = new Date(); };
 
-    const toggleTask = async (task) => {
+    const toggleTask = (task) => {
+      const targetCompleted = !task.completed;
+      if (targetCompleted && utils.needsOverdueReason(task)) {
+        overdueTask.value = task;
+        return;
+      }
+      doToggle(task, targetCompleted);
+    };
+
+    const doToggle = async (task, targetCompleted, reason) => {
       try {
-        await axios.put(`/api/tasks/${task.id}`, {
+        const payload = {
           ...task,
-          completed: !task.completed,
+          completed: targetCompleted,
           dueDate: task.dueDate ? task.dueDate : null
-        });
-        showToast(task.completed ? '已标记为未完成' : '已完成！', 'success');
+        };
+        if (reason) payload.overdueReason = reason;
+        await axios.put(`/api/tasks/${task.id}`, payload);
+        showToast(targetCompleted ? '已完成！' : '已标记为未完成', 'success');
         fetchTasks();
       } catch (e) {
-        showToast('操作失败', 'danger');
+        let msg = '操作失败';
+        if (e.response && e.response.data && e.response.data.message) {
+          msg = e.response.data.message;
+        }
+        showToast(msg, 'danger');
       }
+    };
+
+    const submitOverdueReason = async (reason) => {
+      const task = overdueTask.value;
+      if (!task) return;
+      overdueTask.value = null;
+      await doToggle(task, true, reason);
     };
 
     const clearDueDate = async (task) => {
@@ -462,6 +492,7 @@ export default {
       showScheduleModal, editingTask, selectedTaskId, scheduleForm,
       openScheduleModal, handleScheduleTask,
       handleDragStart, handleDrop,
+      overdueTask, submitOverdueReason,
       utils
     };
   }

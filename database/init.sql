@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     completed BOOLEAN DEFAULT FALSE,
     priority ENUM('high', 'medium', 'low') DEFAULT 'medium',
     due_date DATETIME DEFAULT NULL,
+    overdue_reason TEXT DEFAULT NULL,
+    completed_at DATETIME DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -52,7 +54,9 @@ CALL add_column_if_missing('tasks', 'user_id', 'INT NULL AFTER `id`');
 CALL add_column_if_missing('tasks', 'assignee_id', 'INT DEFAULT NULL AFTER `user_id`');
 CALL add_column_if_missing('tasks', 'priority', 'ENUM(''high'', ''medium'', ''low'') DEFAULT ''medium'' AFTER `completed`');
 CALL add_column_if_missing('tasks', 'due_date', 'DATETIME DEFAULT NULL AFTER `priority`');
-CALL add_column_if_missing('tasks', 'created_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP AFTER `due_date`');
+CALL add_column_if_missing('tasks', 'overdue_reason', 'TEXT DEFAULT NULL AFTER `due_date`');
+CALL add_column_if_missing('tasks', 'completed_at', 'DATETIME DEFAULT NULL AFTER `overdue_reason`');
+CALL add_column_if_missing('tasks', 'created_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP AFTER `completed_at`');
 CALL add_column_if_missing('tasks', 'updated_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER `created_at`');
 
 DROP PROCEDURE IF EXISTS add_column_if_missing;
@@ -87,4 +91,10 @@ INSERT INTO tasks (user_id, assignee_id, text, completed, priority, due_date)
 SELECT @user1_id, @user1_id, '编写前端组件', false, 'medium', DATE_ADD(NOW(), INTERVAL 2 DAY)
 WHERE NOT EXISTS (
     SELECT 1 FROM tasks WHERE user_id = @user1_id AND text = '编写前端组件'
+);
+
+INSERT INTO tasks (user_id, assignee_id, text, completed, priority, due_date, overdue_reason, completed_at)
+SELECT @admin_id, @admin_id, '修复登录页样式错位问题', true, 'high', DATE_SUB(NOW(), INTERVAL 2 DAY), '需求评审延后启动，开发排期被迫后移，导致跨过原定截止日期才完成', NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM tasks WHERE user_id = @admin_id AND text = '修复登录页样式错位问题'
 );

@@ -12,7 +12,9 @@ public class Task {
     private Timestamp dueDate;
     private Timestamp createdAt;
     private Timestamp updatedAt;
-    
+    private String overdueReason;
+    private Timestamp completedAt;
+
     // Extra fields for frontend
     private String username; // Creator's name
     private String assigneeName;
@@ -36,6 +38,10 @@ public class Task {
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
     public Timestamp getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }
+    public String getOverdueReason() { return overdueReason; }
+    public void setOverdueReason(String overdueReason) { this.overdueReason = overdueReason; }
+    public Timestamp getCompletedAt() { return completedAt; }
+    public void setCompletedAt(Timestamp completedAt) { this.completedAt = completedAt; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
     public String getAssigneeName() { return assigneeName; }

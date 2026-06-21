@@ -21,6 +21,7 @@ public class TaskServlet extends HttpServlet {
     private static final java.util.Set<String> VALID_PRIORITIES = java.util.Set.of("high", "medium", "low");
     private static final java.util.Set<String> VALID_BATCH_OPS = java.util.Set.of("priority", "status", "dueDate", "assignee");
     private static final int MAX_TEXT_LENGTH = 500;
+    private static final int MAX_REASON_LENGTH = 500;
 
     private String validateTask(Task task, boolean isUpdate) {
         if (task.getText() == null || task.getText().trim().isEmpty()) {
@@ -40,6 +41,9 @@ public class TaskServlet extends HttpServlet {
             if (dueTime < now - tenYearsMs || dueTime > now + tenYearsMs) {
                 return "截止时间不合法";
             }
+        }
+        if (task.getOverdueReason() != null && task.getOverdueReason().length() > MAX_REASON_LENGTH) {
+            return "逾期原因不能超过 " + MAX_REASON_LENGTH + " 个字符";
         }
         return null;
     }
@@ -80,6 +84,8 @@ public class TaskServlet extends HttpServlet {
                     task.setUpdatedAt(rs.getTimestamp("updated_at"));
                     task.setUsername(rs.getString("creator_name"));
                     task.setAssigneeName(rs.getString("assignee_name"));
+                    task.setOverdueReason(rs.getString("overdue_reason"));
+                    task.setCompletedAt(rs.getTimestamp("completed_at"));
                     tasks.add(task);
                 }
             }
@@ -225,7 +231,11 @@ public class TaskServlet extends HttpServlet {
                 if ("priority".equals(operation)) {
                     updateSql = "UPDATE tasks SET priority = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (";
                 } else if ("status".equals(operation)) {
-                    updateSql = "UPDATE tasks SET completed = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (";
+                    if ("completed".equals(value)) {
+                        updateSql = "UPDATE tasks SET completed = TRUE, completed_at = CASE WHEN completed = FALSE THEN CURRENT_TIMESTAMP ELSE completed_at END, updated_at = CURRENT_TIMESTAMP WHERE id IN (";
+                    } else {
+                        updateSql = "UPDATE tasks SET completed = FALSE, completed_at = NULL, overdue_reason = NULL, updated_at = CURRENT_TIMESTAMP WHERE id IN (";
+                    }
                 } else if ("dueDate".equals(operation)) {
                     updateSql = "UPDATE tasks SET due_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (";
                 } else if ("assignee".equals(operation)) {
@@ -243,8 +253,6 @@ public class TaskServlet extends HttpServlet {
                     int paramIndex = 1;
                     if ("priority".equals(operation)) {
                         updatePs.setString(paramIndex++, value);
-                    } else if ("status".equals(operation)) {
-                        updatePs.setBoolean(paramIndex++, "completed".equals(value));
                     } else if ("dueDate".equals(operation)) {
                         if (value != null && !value.isEmpty()) {
                             long dueTime = Long.parseLong(value);
@@ -306,7 +314,10 @@ public class TaskServlet extends HttpServlet {
         try {
             int taskId = Integer.parseInt(pathInfo.substring(1));
             
-            String checkSql = "SELECT user_id, assignee_id FROM tasks WHERE id = ?";
+            String checkSql = "SELECT user_id, assignee_id, completed, overdue_reason, completed_at FROM tasks WHERE id = ?";
+            boolean wasCompleted = false;
+            String existingOverdueReason = null;
+            Timestamp existingCompletedAt = null;
             try (Connection conn = DBUtil.getConnection();
                  PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
                 checkPs.setInt(1, taskId);
@@ -325,9 +336,12 @@ public class TaskServlet extends HttpServlet {
                         resp.getWriter().write("{\"success\":false, \"message\":\"Permission denied: only creator or assignee can update this task\"}");
                         return;
                     }
+                    wasCompleted = rs.getBoolean("completed");
+                    existingOverdueReason = rs.getString("overdue_reason");
+                    existingCompletedAt = rs.getTimestamp("completed_at");
                 }
             }
-            
+
             Task task = objectMapper.readValue(req.getReader(), Task.class);
             String validationError = validateTask(task, true);
             if (validationError != null) {
@@ -335,7 +349,36 @@ public class TaskServlet extends HttpServlet {
                 resp.getWriter().write("{\"success\":false, \"message\":\"" + validationError + "\"}");
                 return;
             }
-            String sql = "UPDATE tasks SET assignee_id = ?, text = ?, completed = ?, priority = ?, due_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+
+            long now = System.currentTimeMillis();
+            boolean willComplete = task.isCompleted();
+            Timestamp completedAtToStore;
+            String overdueReasonToStore;
+
+            if (willComplete && !wasCompleted) {
+                boolean overdueAtCompletion = task.getDueDate() != null && task.getDueDate().getTime() < now;
+                if (overdueAtCompletion) {
+                    String reason = task.getOverdueReason();
+                    if (reason == null || reason.trim().isEmpty()) {
+                        resp.setStatus(400);
+                        resp.getWriter().write("{\"success\":false, \"message\":\"该任务已逾期，完成时请补录逾期原因\"}");
+                        return;
+                    }
+                    overdueReasonToStore = reason.trim();
+                } else {
+                    overdueReasonToStore = null;
+                }
+                completedAtToStore = new Timestamp(now);
+            } else if (willComplete) {
+                completedAtToStore = existingCompletedAt;
+                String reason = task.getOverdueReason();
+                overdueReasonToStore = (reason != null && !reason.trim().isEmpty()) ? reason.trim() : existingOverdueReason;
+            } else {
+                completedAtToStore = null;
+                overdueReasonToStore = null;
+            }
+
+            String sql = "UPDATE tasks SET assignee_id = ?, text = ?, completed = ?, priority = ?, due_date = ?, overdue_reason = ?, completed_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
             try (Connection conn = DBUtil.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setObject(1, task.getAssigneeId());
@@ -343,7 +386,9 @@ public class TaskServlet extends HttpServlet {
                 ps.setBoolean(3, task.isCompleted());
                 ps.setString(4, task.getPriority());
                 ps.setTimestamp(5, task.getDueDate());
-                ps.setInt(6, taskId);
+                ps.setString(6, overdueReasonToStore);
+                ps.setTimestamp(7, completedAtToStore);
+                ps.setInt(8, taskId);
                 ps.executeUpdate();
                 resp.getWriter().write("{\"success\":true}");
             }

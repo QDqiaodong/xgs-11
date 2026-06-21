@@ -2457,3 +2457,118 @@ body {
   text-align: center;
   padding-top: 0.25rem;
 }
+
+/* ===== Overdue Reason Summary (list) ===== */
+.overdue-reason-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+  padding: 0.5rem 0.8rem;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-left: 3px solid var(--warning);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  color: #92400e;
+  cursor: pointer;
+  transition: 0.25s;
+}
+.overdue-reason-summary:hover {
+  background: #ffedd5;
+  border-color: #fdba74;
+}
+.ors-icon { font-size: 0.9rem; }
+.ors-label { font-weight: 700; color: #b45309; flex-shrink: 0; }
+.ors-text {
+  flex: 1;
+  color: #78350f;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ors-more {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ===== Overdue Reason Modal ===== */
+.overdue-reason-modal { max-width: 520px; }
+.overdue-task-preview {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1.2rem;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: var(--radius-md);
+  margin-bottom: 1.5rem;
+}
+.otp-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+.otp-info { display: flex; flex-direction: column; gap: 0.3rem; }
+.otp-label { font-size: 0.78rem; font-weight: 700; color: #b45309; }
+.otp-text { font-weight: 700; color: var(--text-main); }
+.otp-due { font-size: 0.8rem; font-weight: 700; color: var(--danger); }
+.overdue-reason-area { min-height: 120px; resize: vertical; }
+.req { color: var(--danger); margin-left: 0.2rem; }
+
+/* ===== Task Detail Modal ===== */
+.task-detail-modal { max-width: 560px; }
+.task-detail-body { display: flex; flex-direction: column; gap: 1.5rem; }
+.detail-section { display: flex; flex-direction: column; gap: 0.5rem; }
+.detail-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.detail-text {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--text-main);
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem 1.5rem;
+}
+.detail-cell { display: flex; flex-direction: column; gap: 0.4rem; }
+.detail-value { font-weight: 600; color: var(--text-main); }
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.9rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  width: fit-content;
+}
+.status-done { background: #dcfce7; color: var(--success); }
+.status-pending { background: #e0e7ff; color: var(--primary); }
+.overdue-detail-section {
+  padding: 1.1rem 1.2rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-left: 4px solid var(--danger);
+  border-radius: var(--radius-md);
+}
+.overdue-detail-label { color: var(--danger); }
+.detail-overdue-text {
+  margin-top: 0.4rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #7f1d1d;
+  font-weight: 500;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
